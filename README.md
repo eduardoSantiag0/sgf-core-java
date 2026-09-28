@@ -17,23 +17,23 @@ Java 17+. No runtime dependencies (not even a logging framework).
 
 If your program touches SGF files, this is the layer you would otherwise write yourself:
 
-* an **editor or viewer** that loads a game, lets the user add comments and variations, and saves it;
-* a **server or bot** that receives SGF from users, validates it, stores it and hands it back;
-* a **study or teaching tool** that annotates games, extracts problems, or merges collections;
-* a **converter or importer** between SGF and another format;
-* a **front end for a Go-playing program** that needs the position at a given move;
-* any script that needs to answer "who played what, and where does the tree branch?".
+- an **editor or viewer** that loads a game, lets the user add comments and variations, and saves it;
+- a **server or bot** that receives SGF from users, validates it, stores it and hands it back;
+- a **study or teaching tool** that annotates games, extracts problems, or merges collections;
+- a **converter or importer** between SGF and another format;
+- a **front end for a Go-playing program** that needs the position at a given move;
+- any script that needs to answer "who played what, and where does the tree branch?".
 
 What you get:
 
-| | |
-|---|---|
-| **Variations are first-class** | The game is a tree. Add a branch to any node with one call; the main line is the first child. |
-| **Nothing is lost** | Properties the library does not know are kept, in order, with all their values. `parse -> edit -> serialize` never drops data you did not touch. |
-| **Safe on untrusted input** | Configurable limits, no recursion anywhere (a 200 000-move game and deeply nested variations are tested), and a value limit enforced while reading. |
-| **Errors you can act on** | `Unexpected end of SGF at position 129 (line 4, column 1). Expected ')' ...`, with position, line and column also available as getters. |
-| **Thread-safe parser** | `SgfParser` and `SgfSerializer` are stateless; share one instance. |
-| **Go helpers, kept apart** | Coordinates (`pd` <-> `Q16`), moves, positions, validation live in their own package. The core model knows nothing about Go. |
+|                                |                                                                                                                                                     |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Variations are first-class** | The game is a tree. Add a branch to any node with one call; the main line is the first child.                                                       |
+| **Nothing is lost**            | Properties the library does not know are kept, in order, with all their values. `parse -> edit -> serialize` never drops data you did not touch.    |
+| **Safe on untrusted input**    | Configurable limits, no recursion anywhere (a 200 000-move game and deeply nested variations are tested), and a value limit enforced while reading. |
+| **Errors you can act on**      | `Unexpected end of SGF at position 129 (line 4, column 1). Expected ')' ...`, with position, line and column also available as getters.             |
+| **Thread-safe parser**         | `SgfParser` and `SgfSerializer` are stateless; share one instance.                                                                                  |
+| **Go helpers, kept apart**     | Coordinates (`pd` <-> `Q16`), moves, positions, validation live in their own package. The core model knows nothing about Go.                        |
 
 ## Quick start
 
@@ -125,16 +125,16 @@ try {
 
 ## The model
 
-| SGF | Here |
-|---|---|
-| Collection | `SgfCollection` (one or more games) |
-| GameTree + Sequence | `SgfGameTree` (a root `SgfNode`) |
-| Node | `SgfNode`: ordered properties + children |
+| SGF                  | Here                                           |
+| -------------------- | ---------------------------------------------- |
+| Collection           | `SgfCollection` (one or more games)            |
+| GameTree + Sequence  | `SgfGameTree` (a root `SgfNode`)               |
+| Node                 | `SgfNode`: ordered properties + children       |
 | Property / PropValue | `SgfProperty`: identifier + one or more values |
 
 A node's **first child is the main line, further children are variations.** This is not the shape of
 the grammar (`GameTree = "(" Sequence GameTree* ")"`), and that is deliberate: a variation can hang
-from *any* node, including one in the middle of what a file writes as a single sequence, so
+from _any_ node, including one in the middle of what a file writes as a single sequence, so
 `addVariation` never has to split and re-join sequences. Parser and serializer translate between
 the grammar and the tree; `(;A(;B))` and `(;A;B)` are the same tree.
 
@@ -156,25 +156,25 @@ An editor's "add variation here" on a move usually means `addAlternative`. Both 
 
 Three ways to refer to a node, and what each is good for:
 
-| Identifier | Stable across serialize/parse | Unique in the tree | Verdict |
-|---|---|---|---|
-| Move number (`getMove(n)`) | yes | only on the main line | What people mean by "move 73". Not defined inside variations. |
-| Object identity / random id | **no** | yes | Fine inside one in-memory session; useless in storage or across processes. |
-| **Path** (`node.path()` -> `/0.0.1`) | **yes** | **yes** | Deterministic child-index address from the root. Use it for bookmarks, comments-by-location, indexes. |
+| Identifier                           | Stable across serialize/parse | Unique in the tree    | Verdict                                                                                               |
+| ------------------------------------ | ----------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- |
+| Move number (`getMove(n)`)           | yes                           | only on the main line | What people mean by "move 73". Not defined inside variations.                                         |
+| Object identity / random id          | **no**                        | yes                   | Fine inside one in-memory session; useless in storage or across processes.                            |
+| **Path** (`node.path()` -> `/0.0.1`) | **yes**                       | **yes**               | Deterministic child-index address from the root. Use it for bookmarks, comments-by-location, indexes. |
 
-A path stays valid while variations are only *appended*. Removing or reordering siblings changes
+A path stays valid while variations are only _appended_. Removing or reordering siblings changes
 later siblings' paths. `game.find(path)` resolves one.
 
 ## Robustness (untrusted input)
 
-* **No recursion anywhere** (parse, serialize, copy, compare, paths). A 200 000-move game and 900
+- **No recursion anywhere** (parse, serialize, copy, compare, paths). A 200 000-move game and 900
   levels of nested variations are covered by tests. Recursive implementations typically overflow
   the stack at a few thousand nodes.
-* **Limits** in `SgfParserOptions`: `maxInputSize` (10 MiB), `maxTreeDepth` (1 000), `maxNodes`
-  (1 000 000), `maxPropertyValueLength` (1 MiB). The value limit is enforced *while reading*, so an
+- **Limits** in `SgfParserOptions`: `maxInputSize` (10 MiB), `maxTreeDepth` (1 000), `maxNodes`
+  (1 000 000), `maxPropertyValueLength` (1 MiB). The value limit is enforced _while reading_, so an
   unterminated 1 GB value cannot exhaust memory. Exceeding one raises `SgfLimitExceededException`
   (map it to "too large"), distinct from `SgfParseException` ("malformed").
-* **Thread safety**: `SgfParser`, `SgfSerializer` and `SgfParserOptions` are stateless/immutable;
+- **Thread safety**: `SgfParser`, `SgfSerializer` and `SgfParserOptions` are stateless/immutable;
   share one instance. Trees are mutable and **not** thread-safe: give each thread that edits its own
   tree (see `copy()`).
 
@@ -185,9 +185,36 @@ deviations found in files from real servers: FF[3]-style lowercase identifiers (
 first node written without its `;` (seen in Nihon Ki-in exports), and a stray `)`. It still rejects
 real structural damage (missing brackets or parentheses, empty trees).
 
-As a one-off check (not part of this repository's test suite) the parser was run over 90 320 real
-SGF files from public game collections, about 19 million nodes: all parse (two only in lenient mode,
-for exactly the reasons above) and every one round-trips.
+As a one-off check (not part of this repository's test suite) the parser was run over 96 574 real
+SGF files from [a public game collection](https://homepages.cwi.nl/~aeb/go/games/games/), about 20
+million nodes: all parse (two only in lenient mode, for exactly the reasons above) and every one
+round-trips. The corpus itself is not part of this repository:
+
+```
+==== corpus round-trip summary ====
+files scanned       : 96574
+parsed strict        : 96572
+parsed lenient-only  : 2
+failed to parse      : 0
+round-trip failures  : 0
+total nodes          : 20076887
+total bytes          : 134518404
+elapsed              : 37,8s
+throughput           : 2557 files/s, 531680 nodes/s
+```
+
+That check is reproducible with `CorpusRoundTripTool` (`src/test/java/.../sgf/tools`), a manual
+tool, not a JUnit test, meant to be pointed at a local directory of `.sgf` files:
+
+```
+mvn -q test-compile
+java -cp "target/classes;target/test-classes" io.github.eduardosantiag0.sgf.tools.CorpusRoundTripTool [directory] [failures-file]
+```
+
+(`:` instead of `;` on Linux/macOS). `directory` defaults to `games` (this repo's empty folder for
+dropping `.sgf` files) when omitted. It walks the directory recursively, parses every file (falling
+back to lenient mode on a strict failure), reparses both the pretty and compact serialization of
+the result, and reports totals plus every parse or round-trip failure.
 
 ### Encoding
 
@@ -202,16 +229,16 @@ characters (structure and moves are unaffected). If you know the charset, use
 Applies to games of type `GM[1]`. Everything here is optional: the core model and parser work for
 any SGF game type.
 
-* `SgfCoordinate`: `pd` <-> `Q16`, the only place coordinate conversion lives. SGF counts rows from
+- `SgfCoordinate`: `pd` <-> `Q16`, the only place coordinate conversion lives. SGF counts rows from
   the top; human/GTP counts from the bottom and skips the letter `I`. Also expands `aa:cc` rectangles.
-* `SgfMove`: colour + point or pass (`B[]`, and the legacy `B[tt]` on boards up to 19).
-* `GoGame`: read-only view of a game tree: board size, players, ranks, komi, rules, result,
+- `SgfMove`: colour + point or pass (`B[]`, and the legacy `B[tt]` on boards up to 19).
+- `GoGame`: read-only view of a game tree: board size, players, ranks, komi, rules, result,
   main-line moves, positions.
-* `GoPosition`: board size + setup stones + moves. **A description, not a simulation**: there is no
+- `GoPosition`: board size + setup stones + moves. **A description, not a simulation**: there is no
   capture, ko or legality logic; replay it with whatever rules implementation you use. Setup
-  properties *after* the root cannot be expressed this way; `hasMidGameSetup()` tells you.
-* `GoNodes`: read/write point lists (`AB`, `TR`, ...) and labels (`LB`).
-* `GoGame.validate()`: reports SGF that parses fine but is odd as a Go game (move off the board,
+  properties _after_ the root cannot be expressed this way; `hasMidGameSetup()` tells you.
+- `GoNodes`: read/write point lists (`AB`, `TR`, ...) and labels (`LB`).
+- `GoGame.validate()`: reports SGF that parses fine but is odd as a Go game (move off the board,
   `B` and `W` in one node, ...) instead of failing to parse it.
 
 ## What it is not
@@ -221,9 +248,27 @@ writes SGF, and describes Go positions; what you build on that is up to you.
 
 ## Building
 
+Requirements: JDK 17+ and Maven (tested with Maven 3.9.9 / JDK 17.0.10). No IDE or extra tooling
+needed; it's a plain Maven project.
+
 ```
 mvn verify            # compile and run the test suite
+mvn test               # just the tests
+mvn package            # build the jar into target/
 ```
+
+This is a library, not an application, so there is nothing to "launch" beyond the test suite.
+The one runnable class is `CorpusRoundTripTool` (`src/test/java/.../sgf/tools`), a manual tool for
+checking a local directory of `.sgf` files, not part of `mvn test`:
+
+```
+mvn -q test-compile
+java -cp "target/classes;target/test-classes" io.github.eduardosantiag0.sgf.tools.CorpusRoundTripTool [directory] [failures-file]
+```
+
+(`:` instead of `;` between classpath entries on Linux/macOS.) `directory` defaults to `games`, the
+empty folder in this repo meant for dropping `.sgf` files to try it against, so it can be run with
+no arguments at all. See "Strict by default, lenient on request" above for what it checks and reports.
 
 Maintainers: see [RELEASING.md](RELEASING.md).
 
