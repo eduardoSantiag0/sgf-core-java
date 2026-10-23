@@ -7,7 +7,7 @@ with first-class support for **variations** and helpers for **Go**.
 <dependency>
   <groupId>io.github.eduardosantiag0</groupId>
   <artifactId>sgf-core-java</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
@@ -101,6 +101,30 @@ SgfMove.black("pd").toHuman(19);                // "Q16"
 GoPosition p = go.positionBefore(73);      // or positionBefore(node) / positionAfter(node)
 p.boardSize();  p.setupStones();  p.moves();   // handicap/setup stones, then the moves in order
 p.canonical();   // "size=19;setup=B:dd,B:pp;moves=B:pd,W:dd,..." - a stable key for the position
+```
+
+**Build moves from a human-typed list**
+
+```java
+List<SgfMove> moves = SgfMove.alternating(List.of("Q16", "D4", "D16", "pass"), StoneColor.BLACK, 19);
+node.addVariation(SgfMove.toNodes(moves));   // or addAlternative, same conversion either way
+```
+
+**Cut a game at a node into a standalone game**
+
+```java
+// node's own colour becomes PL on the new root; the position before it is baked into AB/AW
+SgfGameTree sub = go.makeTsumego(node);              // or makeTsumego(node, StoneColor.WHITE)
+sub.root().values("AB");  sub.root().values("AW");   // the baked-in setup stones
+```
+
+This only bakes in *placement*: like the rest of the library, there is no capture/ko logic, so a
+stone captured on the way to `node` is not removed from the setup.
+
+**Reconstruct a whole SGF string (parse, then write it back out)**
+
+```java
+String canonical = parser.reconstruct(sgf);   // SgfSerializer.pretty().serialize(parser.parse(sgf))
 ```
 
 **Check a game that parsed fine**

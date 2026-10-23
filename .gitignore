@@ -4,3 +4,9 @@ target/
 .vscode/
 *.class
 dependency-reduced-pom.xml
+
+# Local .sgf corpora used with CorpusRoundTripTool (never checked in)
+games/*
+!games/.gitkeep
+src/test/java/io/github/eduardosantiag0/sgf/tools/*-corpus/
+*.log

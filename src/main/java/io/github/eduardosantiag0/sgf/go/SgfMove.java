@@ -115,6 +115,31 @@ public final class SgfMove {
   }
 
   /**
+   * Converts a list of human / GTP points into alternating moves, starting with {@code
+   * startingColor}. Handy to turn a line typed or pasted by a person (as from a diagram or a game
+   * record without SGF) straight into moves.
+   *
+   * @param points the points in playing order, each as accepted by {@link
+   *     SgfCoordinate#fromHuman}, or the literal {@code "pass"} (case-insensitive)
+   * @param startingColor who plays the first point
+   * @param boardSize the size of the (square) board
+   * @return one move per point, alternating colour, in the same order
+   * @throws SgfSemanticException if a point is malformed or off the board
+   */
+  public static List<SgfMove> alternating(List<String> points, StoneColor startingColor, int boardSize) {
+    Objects.requireNonNull(points, "points");
+    Objects.requireNonNull(startingColor, "startingColor");
+    StoneColor color = startingColor;
+    List<SgfMove> moves = new ArrayList<>(points.size());
+    for (String point : points) {
+      moves.add(
+          point.equalsIgnoreCase("pass") ? pass(color) : of(color, SgfCoordinate.fromHuman(point, boardSize)));
+      color = color.opposite();
+    }
+    return moves;
+  }
+
+  /**
    * Creates a fresh node holding this move, ready to be added to a tree.
    *
    * @return a new node with a {@code B} or {@code W} property

@@ -267,6 +267,77 @@ class GoGameTest {
     assertThat(game.positionBefore(4).moves()).hasSize(3);
   }
 
+  // ------------------------------------------------------------------ extraction
+
+  @Test
+  void makeTsumegoBakesThePositionBeforeIntoSetupStones() {
+    GoGame game = go("(;GM[1]SZ[19]PB[Alice]PW[Bob];B[pd];W[dd];B[qp];W[dp])");
+    SgfNode thirdMove = game.tree().getMove(3); // B[qp]
+
+    SgfGameTree extracted = game.makeTsumego(thirdMove);
+    GoGame extractedGame = GoGame.of(extracted);
+
+    assertThat(extracted.root().values("AB")).containsExactly("pd");
+    assertThat(extracted.root().values("AW")).containsExactly("dd");
+    assertThat(extracted.root().value("PL")).contains("B");
+    assertThat(extracted.root().value("PB")).contains("Alice");
+    assertThat(extracted.root().value("PW")).contains("Bob");
+    assertThat(extractedGame.mainLineMoves())
+        .containsExactly(SgfMove.black("qp"), SgfMove.white("dp"));
+  }
+
+  @Test
+  void makeTsumegoKeepsEveryVariationUnderTheNode() {
+    GoGame game = go("(;GM[1]SZ[19];B[pd];W[dd](;B[qp])(;B[pp]))");
+    SgfNode secondMove = game.tree().getMove(2); // W[dd]
+
+    SgfGameTree extracted = game.makeTsumego(secondMove);
+
+    assertThat(extracted.root().children()).hasSize(1);
+    SgfNode copiedNode = extracted.root().children().get(0);
+    assertThat(copiedNode.children()).hasSize(2);
+    assertThat(copiedNode.children().get(0).value("B")).contains("qp");
+    assertThat(copiedNode.children().get(1).value("B")).contains("pp");
+  }
+
+  @Test
+  void makeTsumegoDoesNotModifyTheOriginalGame() {
+    GoGame game = go("(;GM[1]SZ[19];B[pd];W[dd])");
+    SgfNode secondMove = game.tree().getMove(2);
+
+    game.makeTsumego(secondMove);
+
+    assertThat(secondMove.parent()).isPresent();
+    assertThat(game.tree().root().hasProperty("AB")).isFalse();
+  }
+
+  @Test
+  void makeTsumegoWithExplicitColorIgnoresTheNodesOwnMove() {
+    GoGame game = go("(;GM[1]SZ[19];B[pd])");
+    SgfNode firstMove = game.tree().getMove(1);
+
+    SgfGameTree extracted = game.makeTsumego(firstMove, StoneColor.WHITE);
+
+    assertThat(extracted.root().value("PL")).contains("W");
+  }
+
+  @Test
+  void makeTsumegoRejectsANodeWithNoMoveWhenColorIsNotGiven() {
+    GoGame game = go("(;GM[1]SZ[19]C[hello];B[pd])");
+    SgfNode root = game.tree().root();
+
+    assertThatThrownBy(() -> game.makeTsumego(root)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void makeTsumegoRejectsANodeFromAnotherGame() {
+    GoGame game = go(GAME);
+    SgfNode stranger = parser.parse("(;B[pd])").firstGame().root();
+
+    assertThatThrownBy(() -> game.makeTsumego(stranger, StoneColor.BLACK))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   // ------------------------------------------------------------------ validation
 
   @Test

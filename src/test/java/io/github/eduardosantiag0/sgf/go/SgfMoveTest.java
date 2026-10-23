@@ -107,4 +107,33 @@ class SgfMoveTest {
     assertThat(StoneColor.BLACK.sgfIdentifier()).isEqualTo("B");
     assertThat(StoneColor.WHITE.sgfIdentifier()).isEqualTo("W");
   }
+
+  @Test
+  void alternatingBuildsMovesOfSwappingColour() {
+    List<SgfMove> moves = SgfMove.alternating(List.of("Q16", "D4", "D16"), StoneColor.BLACK, 19);
+
+    assertThat(moves)
+        .containsExactly(SgfMove.black("pd"), SgfMove.white("dp"), SgfMove.black("dd"));
+  }
+
+  @Test
+  void alternatingAcceptsPassCaseInsensitively() {
+    List<SgfMove> moves = SgfMove.alternating(List.of("Q16", "Pass", "PASS"), StoneColor.BLACK, 19);
+
+    assertThat(moves)
+        .containsExactly(SgfMove.black("pd"), SgfMove.pass(StoneColor.WHITE), SgfMove.pass(StoneColor.BLACK));
+  }
+
+  @Test
+  void alternatingStartingWithWhite() {
+    List<SgfMove> moves = SgfMove.alternating(List.of("D4", "Q16"), StoneColor.WHITE, 19);
+
+    assertThat(moves).containsExactly(SgfMove.white("dp"), SgfMove.black("pd"));
+  }
+
+  @Test
+  void alternatingRejectsAnOffBoardOrMalformedPoint() {
+    assertThatThrownBy(() -> SgfMove.alternating(List.of("Z99"), StoneColor.BLACK, 19))
+        .isInstanceOf(SgfSemanticException.class);
+  }
 }

@@ -5,6 +5,7 @@ import io.github.eduardosantiag0.sgf.model.SgfGameTree;
 import io.github.eduardosantiag0.sgf.model.SgfNode;
 import io.github.eduardosantiag0.sgf.parser.SgfLexer.Token;
 import io.github.eduardosantiag0.sgf.parser.SgfLexer.Type;
+import io.github.eduardosantiag0.sgf.serializer.SgfSerializer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -159,6 +160,22 @@ public final class SgfParser {
     try (InputStream in = Files.newInputStream(file)) {
       return parse(in);
     }
+  }
+
+  /**
+   * Parses SGF text and immediately writes it back out, rebuilding the whole game (every node and
+   * every variation) as a single, canonically formatted SGF string. Equivalent to {@code
+   * SgfSerializer.pretty().serialize(parse(sgf))}, offered here as a one-call convenience; nothing
+   * is lost in the process other than the original whitespace and formatting, per the guarantees of
+   * {@link #parse(String)} and {@link SgfSerializer}.
+   *
+   * @param sgf the SGF text to reconstruct; a leading byte order mark is ignored
+   * @return the reconstructed SGF text, pretty-printed with one node or variation per line
+   * @throws SgfParseException if the text is not valid SGF
+   * @throws SgfLimitExceededException if a limit of the options is exceeded
+   */
+  public String reconstruct(String sgf) {
+    return SgfSerializer.pretty().serialize(parse(sgf));
   }
 
   private void requireWithinInputLimit(byte[] bytes) {

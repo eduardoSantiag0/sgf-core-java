@@ -3,6 +3,7 @@ package io.github.eduardosantiag0.sgf.go;
 import io.github.eduardosantiag0.sgf.model.SgfGameTree;
 import io.github.eduardosantiag0.sgf.model.SgfNode;
 import io.github.eduardosantiag0.sgf.model.SgfNodePath;
+import io.github.eduardosantiag0.sgf.model.SgfProperty;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -302,6 +303,91 @@ public final class GoGame {
     for (SgfCoordinate p : GoNodes.points(node, "AE", size)) {
       stones.remove(p);
     }
+  }
+
+  // ---------------------------------------------------------------- extraction
+
+  /**
+   * Produces a new, standalone game that starts at {@code node}: the position before it is baked
+   * into {@code AB}/{@code AW} setup stones on a fresh root, and {@code node}'s whole subtree --
+   * its continuation and every variation under it, unchanged -- is copied below that root. The
+   * original root's other properties ({@code GM}, {@code SZ}, {@code PB}, {@code PW}, {@code KM},
+   * ...) are kept; its {@code AB}/{@code AW}/{@code AE}/{@code PL} are not, since the new root
+   * replaces them. {@code toMove} is normally the colour of {@code node}'s own move, since that is
+   * the move the new root's position is waiting for; see {@link #makeTsumego(SgfNode)} to infer it
+   * automatically.
+   *
+   * <p>Like {@link GoPosition}, this bakes in only placement: this library has no capture, ko or
+   * legality logic, so a stone captured on the way to {@code node} is not removed from the setup.
+   * Use this only on games where that does not happen, or accept the discrepancy.
+   *
+   * <p>Neither this game nor {@code node} is modified.
+   *
+   * @param node a node of this game to start the new game at
+   * @param toMove who is to move at the new root
+   * @return a new, independent game
+   * @throws IllegalArgumentException if the node does not belong to this game
+   * @throws SgfSemanticException if a value on the way is unusable
+   */
+  public SgfGameTree makeTsumego(SgfNode node, StoneColor toMove) {
+    Objects.requireNonNull(toMove, "toMove");
+    Map<SgfCoordinate, StoneColor> board = boardBefore(node);
+
+    SgfNode newRoot = new SgfNode();
+    for (SgfProperty property : tree.root().properties()) {
+      String identifier = property.identifier();
+      if (!identifier.equals("AB") && !identifier.equals("AW") && !identifier.equals("AE") && !identifier.equals("PL")) {
+        newRoot.setProperty(identifier, property.values());
+      }
+    }
+
+    List<String> blackSetup = new ArrayList<>();
+    List<String> whiteSetup = new ArrayList<>();
+    board.forEach(
+        (point, color) -> (color == StoneColor.BLACK ? blackSetup : whiteSetup).add(point.toSgf()));
+    if (!blackSetup.isEmpty()) {
+      newRoot.setProperty("AB", blackSetup);
+    }
+    if (!whiteSetup.isEmpty()) {
+      newRoot.setProperty("AW", whiteSetup);
+    }
+    newRoot.setProperty("PL", toMove.sgfIdentifier());
+
+    newRoot.addChild(node.copy());
+    return new SgfGameTree(newRoot);
+  }
+
+  /**
+   * Same as {@link #makeTsumego(SgfNode, StoneColor)}, inferring {@code toMove} from {@code
+   * node}'s own {@code B} or {@code W} property.
+   *
+   * @param node a move node of this game to start the new game at
+   * @return a new, independent game
+   * @throws IllegalArgumentException if the node does not belong to this game, or is not a move
+   * @throws SgfSemanticException if a value on the way is unusable
+   */
+  public SgfGameTree makeTsumego(SgfNode node) {
+    SgfMove move =
+        SgfMove.from(node, boardSize())
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "The node has no B or W move to infer who is to move; "
+                            + "use makeTsumego(node, toMove) instead"));
+    return makeTsumego(node, move.color());
+  }
+
+  /** Builds the board as it stood right before {@code node}, by placement only (no captures). */
+  private Map<SgfCoordinate, StoneColor> boardBefore(SgfNode node) {
+    GoPosition before = positionBefore(node);
+    Map<SgfCoordinate, StoneColor> board = new LinkedHashMap<>();
+    for (SgfMove stone : before.setupStones()) {
+      stone.coordinate().ifPresent(point -> board.put(point, stone.color()));
+    }
+    for (SgfMove move : before.moves()) {
+      move.coordinate().ifPresent(point -> board.put(point, move.color()));
+    }
+    return board;
   }
 
   // ---------------------------------------------------------------- validation

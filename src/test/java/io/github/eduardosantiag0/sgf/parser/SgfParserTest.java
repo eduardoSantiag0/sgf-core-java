@@ -333,4 +333,29 @@ class SgfParserTest {
         .isInstanceOf(SgfParseException.class)
         .hasMessageContaining("outside a node");
   }
+
+  @Test
+  void reconstructRoundTripsASimpleSequence() {
+    String sgf = "(;GM[1]FF[4]SZ[19];B[pd];W[dd];B[qp])";
+
+    String reconstructed = parser.reconstruct(sgf);
+
+    assertThat(parser.parse(reconstructed).sameContentAs(parser.parse(sgf))).isTrue();
+  }
+
+  @Test
+  void reconstructKeepsEveryVariation() {
+    String sgf =
+        "(;GM[1]FF[4]SZ[13]AB[jc][kj]AW[dk][cd]PL[B]"
+            + "(;B[kb];W[lb])"
+            + "(;B[dh];W[el])"
+            + "(;B[eg];W[hb]))";
+
+    String reconstructed = parser.reconstruct(sgf);
+    SgfCollection original = parser.parse(sgf);
+    SgfCollection roundTripped = parser.parse(reconstructed);
+
+    assertThat(roundTripped.sameContentAs(original)).isTrue();
+    assertThat(roundTripped.firstGame().root().children()).hasSize(3);
+  }
 }
